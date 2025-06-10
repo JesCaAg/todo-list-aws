@@ -1,0 +1,76 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Get Code') {
+            steps {
+                withCredentials([string(credentialsId: 'token', variable: 'tokengh')]) {
+                    git branch: 'develop', url: 'https://$tokengh@github.com/JesCaAg/todo-list-aws.git' // Traemos el codigo del repo autenticandonos
+                }
+            }
+        }
+        
+        stage('Static Test') {
+            parallel { 
+                stage('Static'){ // Ejecucion de pruebas de analisis de codigo estatico, usando flake8
+                    steps {
+                        sh 'python -m flake8 --format=pylint --exit-zero src > flake8.out'
+                        recordIssues tools: [flake8(name: 'Flake8', pattern: 'flake8.out')]
+                    }
+                }
+                
+                stage('Security test'){ // Ejecucion de pruebas de seguridad, usando bandit
+                    steps {
+                        sh 'python -m bandit --exit-zero -r src -f custom -o bandit.out --msg-template "{abspath}:{line}: [{test_id}] {msg}"'
+                        recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')]
+                    }
+                }
+            }
+        }
+        
+        stage ('Deploy') { // Despliegue del stack de staging
+            steps {
+                sh '''
+                    sam build --config-env staging
+                    sam validate --config-env staging --region us-east-1
+                    sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name staging-todo-list-aws --config-env staging --resolve-s3
+                '''
+                
+            }
+        }
+        
+        stage ('Rest Test') { // Test de integracion
+            steps {
+                script {
+                    def URL = sh(
+                        script: "aws cloudformation describe-stacks --stack-name staging-todo-list-aws --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
+                        returnStdout: true
+                    ).trim()
+                    withEnv(["BASE_URL=${URL}"]) {
+                        sh 'python -m pytest --junitxml=junit-rest.xml test/integration/todoApiTest.py'
+                    }
+                }
+                junit 'junit-rest.xml'
+            }
+        }
+        
+        stage ('Promote') {
+            steps {
+                sh '''
+                    git fetch origin
+                    git checkout master
+                    git merge origin/develop || true
+                    git checkout origin/master -- Jenkinsfile
+                    git add Jenkinsfile
+                    git commit -m "Mantener Jenkinsfile original"
+                    git push origin master
+                '''
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
