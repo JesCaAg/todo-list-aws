@@ -56,15 +56,18 @@ pipeline {
         
         stage ('Promote') {
             steps {
-                sh '''
-                    git fetch origin
-                    git checkout master
-                    git merge origin/develop || true
-                    git checkout origin/master -- Jenkinsfile
-                    git add Jenkinsfile
-                    git commit -m "Mantener Jenkinsfile original"
-                    git push origin master
-                '''
+                withCredentials([string(credentialsId: 'token', variable: 'tokengh')]) {
+                    sh '''
+                        git remote set-url origin https://$tokengh@github.com/JesCaAg/todo-list-aws.git
+                        git fetch origin
+                        git checkout master
+                        git merge origin/develop || true
+                        git checkout origin/master -- Jenkinsfile
+                        git add Jenkinsfile
+                        git commit -m "Mantener Jenkinsfile original"
+                        git push origin master
+                    '''
+                }
             }
         }
     }
