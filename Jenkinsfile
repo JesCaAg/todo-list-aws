@@ -16,6 +16,7 @@ pipeline {
                     steps {
                         sh 'python -m flake8 --format=pylint --exit-zero src > flake8.out'
                         recordIssues tools: [flake8(name: 'Flake8', pattern: 'flake8.out')]
+                        sh '[ -f flake8.out ] && rm flake8.out'
                     }
                 }
                 
@@ -23,6 +24,7 @@ pipeline {
                     steps {
                         sh 'python -m bandit --exit-zero -r src -f custom -o bandit.out --msg-template "{abspath}:{line}: [{test_id}] {msg}"'
                         recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')]
+                        sh '[ -f bandit.out ] && rm bandit.out'
                     }
                 }
             }
@@ -51,6 +53,7 @@ pipeline {
                     }
                 }
                 junit 'junit-rest.xml'
+                sh '[ -f junit-rest.xml ] && rm junit-rest.xml'
             }
         }
         
@@ -61,10 +64,10 @@ pipeline {
                         git remote set-url origin https://$tokengh@github.com/JesCaAg/todo-list-aws.git
                         git fetch origin
                         git checkout master
-                        git merge origin/develop || true
+                        git merge origin/develop --no-commit --no-ff || true
                         git checkout origin/master -- Jenkinsfile
-                        git add Jenkinsfile
-                        git commit -m "Mantener Jenkinsfile original"
+                        git add .
+                        git commit -m "Mergeo de develop en master manteniendo Jenkinsfile original" || echo "Nada que commitear"
                         git push origin master
                     '''
                 }
