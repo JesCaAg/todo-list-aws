@@ -49,11 +49,14 @@ pipeline {
                         returnStdout: true
                     ).trim()
                     withEnv(["BASE_URL=${URL}"]) {
-                        sh 'python -m pytest --junitxml=junit-rest.xml test/integration/todoApiTest.py'
+                        def result = sh (script: 'python -m pytest --junitxml=junit-rest.xml test/integration/todoApiTest.py', returnStatus: true)
+                        junit 'junit-rest.xml'
+                        sh '[ -f junit-rest.xml ] && rm junit-rest.xml'
+                        if (result != 0) {
+                            error "Fallo alguna prueba, abortando pipeline."
+                        }
                     }
                 }
-                junit 'junit-rest.xml'
-                sh '[ -f junit-rest.xml ] && rm junit-rest.xml'
             }
         }
         
