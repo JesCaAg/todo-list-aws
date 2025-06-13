@@ -95,7 +95,7 @@ pipeline {
                 sh '''
                     whoami
                     hostname
-                    python -m pip pytest
+                    python -m pip install pytest
                 '''
                 script {
                     def URL = readFile('url.txt').trim()
