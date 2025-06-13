@@ -70,6 +70,8 @@ pipeline {
                     sam validate --config-env staging --region us-east-1
                     sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name staging-todo-list-aws --config-env staging --resolve-s3
                 '''
+                sh 'aws cloudformation describe-stacks --stack-name staging-todo-list-aws --query 'Stacks[0].Outputs[?OutputKey==\\`BaseUrlApi\\`].OutputValue' --region us-east-1 --output text > url.txt'
+                stash includes: 'url.txt', name: 'url' 
             }
             post {
                 always {
@@ -81,15 +83,13 @@ pipeline {
         stage ('Rest Test') { // Test de integracion
             agent { label 'rest'} // Seleccionamos el agente para pruebas rest
             steps {
+                unstash 'url'
                 sh '''
                     whoami
                     hostname
                 '''
                 script {
-                    def URL = sh(
-                        script: "aws cloudformation describe-stacks --stack-name staging-todo-list-aws --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
-                        returnStdout: true
-                    ).trim()
+                    def URL = readFile('url.txt').trim()
                     withEnv(["BASE_URL=${URL}"]) {
                         def result = sh (script: 'python -m pytest --junitxml=junit-rest.xml test/integration/todoApiTest.py', returnStatus: true)
                         junit 'junit-rest.xml'
