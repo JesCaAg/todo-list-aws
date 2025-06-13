@@ -70,7 +70,15 @@ pipeline {
                     sam validate --config-env staging --region us-east-1
                     sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name staging-todo-list-aws --config-env staging --resolve-s3
                 '''
-                sh 'aws cloudformation describe-stacks --stack-name staging-todo-list-aws --query 'Stacks[0].Outputs[?OutputKey==\\`BaseUrlApi\\`].OutputValue' --region us-east-1 --output text > url.txt'
+                script {
+                    sh '''
+                        aws cloudformation describe-stacks \
+                        --stack-name staging-todo-list-aws \
+                        --query "Stacks[0].Outputs[?OutputKey==\\`BaseUrlApi\\`].OutputValue" \
+                        --region us-east-1 \
+                        --output text > url.txt
+                    '''
+                }
                 stash includes: 'url.txt', name: 'url' 
             }
             post {
