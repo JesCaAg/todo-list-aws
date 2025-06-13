@@ -1,1 +1,79 @@
+pipeline {
+    agent none
 
+    stages {
+        stage('Get Code') {
+            agent { label 'principal'} // Seleccionamos el agente nodo principal
+            steps {
+                sh '''
+                    whoami
+                    hostname
+                '''
+               withCredentials([string(credentialsId: 'token', variable: 'tokengh')]) {
+                    git branch: 'master', url: 'https://$tokengh@github.com/JesCaAg/todo-list-aws.git' // Traemos el codigo del repo autenticandonos
+                }
+            }
+            post {
+                always {
+                    cleanWs()
+                }
+            }
+        }
+        
+        stage ('Deploy') { // Despliegue del stack de staging
+            agent { label 'principal'} // Seleccionamos el agente nodo principal
+            steps {
+                sh '''
+                    whoami
+                    hostname
+                '''
+                sh '''
+                    sam build --config-env production
+                    sam validate --config-env production --region us-east-1
+                    sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name production-todo-list-aws --config-env production --resolve-s3
+                '''
+                script {
+                    sh '''
+                        aws cloudformation describe-stacks \
+                        --stack-name production-todo-list-aws \
+                        --query "Stacks[0].Outputs[?OutputKey==\\`BaseUrlApi\\`].OutputValue" \
+                        --region us-east-1 \
+                        --output text > url.txt
+                    '''
+                }
+                stash includes: 'url.txt', name: 'url' 
+            }
+            post {
+                always {
+                    cleanWs()
+                }
+            }
+        }
+        
+        stage ('Rest Test') { // Test de integracion
+            agent { label 'rest'} // Seleccionamos el agente para pruebas rest
+            steps {
+                unstash 'url'
+                bat '''
+                    whoami
+                    hostname
+                '''
+                script {
+                    def URL = readFile('url.txt').trim()
+                    withEnv(["BASE_URL=${URL}"]) {
+                        def result = sh (script: 'python -m pytest -m soloLectura --junitxml=junit-rest.xml test/integration/todoApiTest.py', returnStatus: true)
+                        junit 'junit-rest.xml'
+                        if (result != 0) {
+                            error "Fallo alguna prueba, abortando pipeline."
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    cleanWs()
+                }
+            }
+        }
+    }
+}
