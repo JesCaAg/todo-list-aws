@@ -92,16 +92,15 @@ pipeline {
             agent { label 'rest'} // Seleccionamos el agente para pruebas rest
             steps {
                 unstash 'url'
-                sh '''
+                bat '''
                     whoami
                     hostname
                 '''
                 script {
                     def URL = readFile('url.txt').trim()
                     withEnv(["BASE_URL=${URL}"]) {
-                        def result = sh (script: 'python -m pytest --junitxml=junit-rest.xml test/integration/todoApiTest.py', returnStatus: true)
+                        def result = bat (script: 'python -m pytest --junitxml=junit-rest.xml test\\integration\\todoApiTest.py', returnStatus: true)
                         junit 'junit-rest.xml'
-                        sh '[ -f junit-rest.xml ] && rm junit-rest.xml'
                         if (result != 0) {
                             error "Fallo alguna prueba, abortando pipeline."
                         }
