@@ -61,7 +61,7 @@ pipeline {
                 script {
                     def URL = readFile('url.txt').trim()
                     withEnv(["BASE_URL=${URL}"]) {
-                        def result = sh (script: 'python -m pytest -m soloLectura --junitxml=junit-rest.xml test/integration/todoApiTest.py', returnStatus: true)
+                        def result = bat (script: 'python -m pytest -m soloLectura --junitxml=junit-rest.xml test/integration/todoApiTest.py', returnStatus: true)
                         junit 'junit-rest.xml'
                         if (result != 0) {
                             error "Fallo alguna prueba, abortando pipeline."
