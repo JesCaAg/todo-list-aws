@@ -7,7 +7,7 @@ pipeline {
                 withCredentials([string(credentialsId: 'token', variable: 'tokengh')]) {
                     git branch: 'develop', url: 'https://$tokengh@github.com/JesCaAg/todo-list-aws.git' // Traemos el codigo del repo autenticandonos                    
                 }
-                wget https://raw.githubusercontent.com/JesCaAg/todo-list-aws-config/refs/heads/staging/samconfig.toml
+                sh 'wget https://raw.githubusercontent.com/JesCaAg/todo-list-aws-config/refs/heads/staging/samconfig.toml'
             }
         }
         
