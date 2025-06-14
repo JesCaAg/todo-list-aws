@@ -7,6 +7,7 @@ pipeline {
                 withCredentials([string(credentialsId: 'token', variable: 'tokengh')]) {
                     git branch: 'master', url: 'https://$tokengh@github.com/JesCaAg/todo-list-aws.git' // Traemos el codigo del repo autenticandonos
                 }
+                sh 'https://raw.githubusercontent.com/JesCaAg/todo-list-aws-config/refs/heads/production/samconfig.toml'
             }
         }
         
@@ -17,7 +18,7 @@ pipeline {
                     sam validate --config-env production --region us-east-1
                     sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name production-todo-list-aws --config-env production --resolve-s3
                 '''
-                
+                sh '[ -f samconfig.toml ] && rm samconfig.toml'
             }
         }
         
