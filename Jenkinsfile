@@ -38,7 +38,7 @@ pipeline {
                     sam validate --config-env staging --region us-east-1
                     sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name staging-todo-list-aws --config-env staging --resolve-s3
                 '''
-                
+                sh '[ -f samconfig.toml ] && rm samconfig.toml'
             }
         }
         
