@@ -12,6 +12,8 @@ pipeline {
                 withCredentials([string(credentialsId: 'token', variable: 'tokengh')]) {
                     git branch: 'develop', url: 'https://$tokengh@github.com/JesCaAg/todo-list-aws.git' // Traemos el codigo del repo autenticandonos
                 }
+                sh 'wget https://raw.githubusercontent.com/JesCaAg/todo-list-aws-config/refs/heads/staging/samconfig.toml'
+                stash includes: 'samconfig.toml', name: 'samconfig' 
             }
             post {
                 always {
@@ -61,6 +63,7 @@ pipeline {
         stage ('Deploy') { // Despliegue del stack de staging
             agent { label 'principal'} // Seleccionamos el agente nodo principal
             steps {
+                unstash 'samconfig'
                 sh '''
                     whoami
                     hostname
