@@ -67,7 +67,11 @@ pipeline {
                     sh '''
                         git remote set-url origin https://$tokengh@github.com/JesCaAg/todo-list-aws.git
                         git fetch origin
-                        git checkout master
+                        if git show-ref --verify --quiet refs/heads/master; then
+                            git checkout master
+                        else
+                            git checkout -b master origin/master
+                        fi
                         git merge origin/develop --no-commit --no-ff || true
                         git checkout origin/master -- Jenkinsfile_agentes Jenkinsfile
                         git add .
